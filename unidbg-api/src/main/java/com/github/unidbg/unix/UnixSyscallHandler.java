@@ -46,6 +46,14 @@ public abstract class UnixSyscallHandler<T extends NewFileIO> implements Syscall
         return fdMap.get(fd);
     }
 
+    @Override
+    public void closeFileIO(int fd) {
+        FileIO io = fdMap.remove(fd);
+        if (io != null) {
+            io.close();
+        }
+    }
+
     protected boolean verbose;
 
     @Override
@@ -88,6 +96,13 @@ public abstract class UnixSyscallHandler<T extends NewFileIO> implements Syscall
     }
 
     @Override
+    public int addFileIO(T io) {
+        int fd = getMinFd();
+        fdMap.put(fd, io);
+        return fd;
+    }
+
+    @Override
     public void addIOResolver(IOResolver<T> resolver) {
         if (!resolvers.contains(resolver)) {
             resolvers.add(0, resolver);
@@ -115,6 +130,8 @@ public abstract class UnixSyscallHandler<T extends NewFileIO> implements Syscall
         if (result != null && result.isSuccess()) {
             emulator.getMemory().setErrno(0);
             return result;
+        } else if (failResult == null) {
+            failResult = result;
         }
 
         Family family = emulator.getFamily();
